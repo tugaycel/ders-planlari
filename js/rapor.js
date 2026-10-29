@@ -129,7 +129,7 @@ function ayarlarView(el, u) {
       DB.ayarKaydet({ kurumAdi: f.kurumAdi || 'Ders Planları', gunBasi, gunSonu, haftaBasi: Number(f.haftaBasi), varsayilanSure: Number(f.varsayilanSure) || 60, onaySureci: !!f.onaySureci });
       return bildir('Ayarlar kaydedildi');
     }
-    if (act === 'yedek') return dosyaIndir(`ozel-ders-yedek-${bugun()}.json`, DB.disaAktar(), 'application/json');
+    if (act === 'yedek') return dosyaIndir(`ders-planlari-yedek-${bugun()}.json`, DB.disaAktar(), 'application/json');
     try {
       if (act === 'demo' && await onayKutusu('Kurumdaki <b>tüm veriler herkes için silinip</b> yerine demo verileri yüklenecek. Devam edilsin mi?', { evet: 'Demo yükle', tehlike: true })) {
         await demoYukle();

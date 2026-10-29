@@ -2,7 +2,7 @@
 
 Ders veren öğretmenler için takvim ve ders takip uygulaması. Kurulum gerektirmez; tarayıcıda çalışır, GitHub Pages üzerinden bir linkle açılır ve verileri Firebase bulut veritabanında saklar.
 
-Canlı adres: https://tugaycel.github.io/ozel-ders/
+Canlı adres: https://tugaycel.github.io/ders-planlari/
 
 ## Özellikler
 
@@ -56,18 +56,18 @@ Ardından tarayıcıda `http://localhost:5173` adresini açın.
 
 ## GitHub Pages ile yayınlama
 
-1. GitHub'da yeni bir depo oluşturun (örneğin `ozel-ders`). Herkese açık (public) depo, ücretsiz hesapta Pages için gereklidir.
+1. GitHub'da yeni bir depo oluşturun (örneğin `ders-planlari`). Herkese açık (public) depo, ücretsiz hesapta Pages için gereklidir.
 2. Bu klasördeki dosyaları depoya gönderin:
    ```bash
    git init
    git add .
-   git commit -m "Özel ders programı"
+   git commit -m "Ders Planları"
    git branch -M main
-   git remote add origin https://github.com/KULLANICI_ADINIZ/ozel-ders.git
+   git remote add origin https://github.com/KULLANICI_ADINIZ/ders-planlari.git
    git push -u origin main
    ```
 3. Depoda **Settings → Pages** sayfasına girin. **Source: Deploy from a branch**, **Branch: main / (root)** seçip kaydedin.
-4. Birkaç dakika içinde uygulama `https://KULLANICI_ADINIZ.github.io/ozel-ders/` adresinde açılır. Linki açan herkes kendi hesabıyla giriş yapar ve yalnızca üyesi olduğu kurumun verisini görür.
+4. Birkaç dakika içinde uygulama `https://KULLANICI_ADINIZ.github.io/ders-planlari/` adresinde açılır. Linki açan herkes kendi hesabıyla giriş yapar ve yalnızca üyesi olduğu kurumun verisini görür.
 
 Not: Depo herkese açık olsa bile içinde öğrenci verisi bulunmaz. Veriler Firebase veritabanında durur ve yalnızca kurum üyelerine açıktır.
 

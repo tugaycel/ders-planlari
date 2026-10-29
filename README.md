@@ -17,6 +17,16 @@ Canlı adres: https://tugaycel.github.io/ozel-ders/
 - **Raporlar**: tarih aralığına göre öğretmen, öğrenci ve kategori bazında yapılan, yapılmayan ve ertelenen ders sayıları, gerçekleşme oranı, toplam süre ve tutar. Raporlar CSV olarak (Excel'de açılabilir) indirilebilir.
 - **Yedekleme**: tüm veriler JSON dosyası olarak indirilir ve geri yüklenir.
 
+## Uygulama olarak yükleme
+
+Site, cihaza uygulama gibi yüklenebilir (PWA): kendi simgesiyle açılır, tarayıcı çubukları görünmez ve internet yokken de açılır.
+
+- **Android (Chrome):** siteyi açın → menü (⋮) → **Uygulamayı yükle** ya da **Ana ekrana ekle**.
+- **iPhone / iPad (Safari):** Paylaş düğmesi → **Ana Ekrana Ekle**.
+- **Bilgisayar (Chrome / Edge):** adres çubuğunun sağındaki **Yükle** simgesi; uygulama başlat menüsüne ve masaüstüne eklenir.
+
+Güncellemeler yüklü uygulamaya kendiliğinden gelir. `sw.js` uygulama dosyalarını cihazda saklar; dosya listesi değişirse içindeki `ONBELLEK` sürümünü artırın.
+
 ## Veriler ve giriş
 
 Veriler **Firebase** (Google) bulut veritabanında, Frankfurt bölgesinde saklanır. Proje: `ozel-ders-c42ad` (tugaycelikk@gmail.com hesabı, ücretsiz Spark planı).
@@ -69,6 +79,9 @@ Not: Depo herkese açık olsa bile içinde öğrenci verisi bulunmaz. Veriler Fi
 
 ```
 index.html        Giriş sayfası
+manifest.webmanifest  Uygulama adı, rengi ve simgeleri (yükleme için)
+sw.js             Service worker: çevrimdışı açılış
+icons/            Uygulama simgeleri
 css/style.css     Görünüm (açık/koyu tema, mobil uyumlu)
 js/util.js        Tarih ve biçim yardımcıları
 js/db.js          Bellek içi veri katmanı (uygulama buradan okur/yazar)

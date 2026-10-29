@@ -462,3 +462,11 @@ input[type=checkbox], input[type=radio] { width: auto; min-height: 0; accent-col
   .modal, .modal.genis { width: 100%; max-height: 92vh; border-radius: 16px 16px 0 0; }
   .izgara-kap { max-height: calc(100vh - 240px); }
 }
+
+/* ---------- Ana ekrana eklenmiş uygulama (çentikli ekranlar) ---------- */
+body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+@media (max-width: 900px) {
+  .yan { padding-top: max(8px, env(safe-area-inset-top)); }
+  main { padding-bottom: calc(40px + env(safe-area-inset-bottom)); }
+  #toast-root { bottom: calc(20px + env(safe-area-inset-bottom)); }
+}

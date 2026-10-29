@@ -112,7 +112,7 @@ function ogretmenlerView(el, u) {
     <div class="sayfa-ust"><h1>Öğretmenler</h1>${yon ? '<div class="sag"><button class="btn birincil" data-act="yeni">+ Öğretmen</button></div>' : ''}</div>
     <p class="soluk aciklama">Bir öğretmenin <b>sorumlusu</b>, o öğretmenin adına ders girebilir ve durum bildirimlerini onaylayabilir. Yöneticiler tüm öğretmenler için yetkilidir.</p>
     <div class="tablo-kap"><table class="tablo tikla">
-      <thead><tr><th>Ad soyad</th><th>Rol</th><th>Sorumlusu</th><th>Ekibi</th><th>Branş</th><th>İletişim</th><th class="sag-hiza">Yapılan / toplam</th></tr></thead>
+      <thead><tr><th>Ad soyad</th><th>Rol</th><th>Sorumlusu</th><th>Ekibi</th><th>Branş</th><th>İletişim</th><th>Uygulama hesabı</th><th class="sag-hiza">Yapılan / toplam</th></tr></thead>
       <tbody>${liste.map(t => {
         const ekip = ekipIdleri(t);
         const s = dersSayilari(d => d.ogretmenId === t.id);
@@ -124,13 +124,17 @@ function ogretmenlerView(el, u) {
           <td>${ekip.length ? ekip.map(id => esc(ogretmenAdi(id))).join(', ') : '<span class="soluk">—</span>'}</td>
           <td>${esc(t.brans || '')}</td>
           <td class="nw">${t.telefon ? `<a href="tel:${esc(t.telefon)}" data-dur>${esc(t.telefon)}</a>` : ''}${t.eposta ? `<br><small class="soluk">${esc(t.eposta)}</small>` : ''}</td>
+          <td class="nw">${t.uid ? `<span class="rozet-d s-yapildi">✓ Bağlı</span><br><small class="soluk">${esc(t.hesapEposta || '')}</small>`
+            : yon && !t.pasif ? '<button class="btn kucuk" data-act="davet">Davet linki</button>' : '<span class="soluk">—</span>'}</td>
           <td class="sag-hiza">${s.yapildi} / ${s.toplam}</td>
         </tr>`;
-      }).join('')}</tbody></table></div>`;
+      }).join('')}</tbody></table></div>
+    ${yon ? '<p class="soluk aciklama" style="margin-top:12px">Bir öğretmenin uygulamaya girebilmesi için “Davet linki” oluşturup ona gönderin. Link tek kullanımlıktır; öğretmen linki açıp kendi e-postasıyla hesap oluşturduğunda kaydına bağlanır.</p>' : ''}`;
 
   el.onclick = e => {
     if (e.target.closest('[data-dur]')) return;
     if (e.target.closest('[data-act=yeni]')) return ogretmenFormu(null);
+    if (e.target.closest('[data-act=davet]')) return davetModal(DB.get('ogretmenler', e.target.closest('[data-id]').dataset.id));
     const id = e.target.closest('[data-id]')?.dataset.id;
     if (id && (yon || id === u.id)) ogretmenFormu(DB.get('ogretmenler', id));
   };
@@ -149,7 +153,6 @@ function ogretmenFormu(t) {
     ad: 'Kaydet', sinif: 'birincil', tik: g => {
       const f = formOku(g);
       if (!f.ad) return hataGoster(g, 'Ad soyad zorunludur.');
-      if (f.pin && !/^\d{4,6}$/.test(f.pin)) return hataGoster(g, 'PIN 4–6 haneli rakam olmalı.');
       const yeni = { ...(t || {}), ad: f.ad, brans: f.brans, telefon: f.telefon, eposta: f.eposta, renk: f.renk || v.renk };
       if (yon) {
         yeni.rol = f.rol;
@@ -158,8 +161,11 @@ function ogretmenFormu(t) {
         const aktifYonetici = DB.list('ogretmenler').filter(x => x.id !== yeni.id && x.rol === 'yonetici' && !x.pasif).length + (yeni.rol === 'yonetici' && !yeni.pasif ? 1 : 0);
         if (!aktifYonetici) return hataGoster(g, 'En az bir aktif yönetici kalmalı.');
       }
-      if (f.pin) yeni.pin = basitKarma(f.pin);
-      if (f.pinKaldir) delete yeni.pin;
+      // Pasife alınan öğretmenin uygulamaya erişimi de kaldırılır.
+      if (yeni.pasif && yeni.uid) {
+        Bulut.erisimiKaldir(yeni).catch(err => bildir(Bulut.hataMetni(err), 'hata'));
+        return void bildir('Öğretmen pasife alındı ve uygulama erişimi kaldırıldı');
+      }
       DB.save('ogretmenler', yeni);
       bildir(t ? 'Öğretmen güncellendi' : 'Öğretmen eklendi');
     },
@@ -188,11 +194,30 @@ function ogretmenFormu(t) {
         <label>Sorumlu öğretmen<select name="sorumluId">${secenekler(sorumluAdaylari, v.sorumluId, { bos: '— Yok —' })}</select>
           <small class="soluk">Adına giriş yapabilir ve bildirimlerini onaylar</small></label>` : ''}
       <fieldset class="tam"><legend>Takvim rengi</legend>${renkSecici('renk', v.renk)}</fieldset>
-      <label>Giriş PIN'i (isteğe bağlı)<input name="pin" inputmode="numeric" autocomplete="new-password" type="password" maxlength="6" placeholder="${t?.pin ? 'Değiştirmek için yeni PIN' : '4–6 hane'}"></label>
-      ${t?.pin ? `<label class="onay-satir"><input type="checkbox" name="pinKaldir"> PIN'i kaldır</label>` : '<div></div>'}
-      ${yon && t ? `<label class="tam onay-satir"><input type="checkbox" name="pasif" ${v.pasif ? 'checked' : ''}> Pasif (giriş yapamaz, yeni derslerde görünmez)</label>` : ''}
-      <p class="tam soluk kucuk-yazi">PIN, aynı cihazı kullananların birbirinin yerine giriş yapmasını zorlaştırmak içindir; gerçek bir güvenlik önlemi değildir.</p>
+      ${t?.uid ? `<p class="tam soluk kucuk-yazi">Uygulama hesabı: ${esc(t.hesapEposta || '')}</p>` : ''}
+      ${yon && t && t.id !== u.id ? `<label class="tam onay-satir"><input type="checkbox" name="pasif" ${v.pasif ? 'checked' : ''}> Pasif (uygulamaya giremez, yeni derslerde görünmez)</label>` : ''}
     </form>`,
+  });
+}
+
+async function davetModal(t) {
+  let kod;
+  try { kod = await Bulut.davetOlustur(t.id); } catch (err) { return bildir('Davet oluşturulamadı: ' + Bulut.hataMetni(err), 'hata'); }
+  const link = `${location.origin}${location.pathname}#davet=${kod}`;
+  const mesaj = `Merhaba ${t.ad}, ${DB.ayarlar().kurumAdi} ders takvimine katılmak için bu linki açıp hesap oluştur: ${link}`;
+  modal({
+    baslik: `${t.ad} için davet`,
+    icerik: `
+      <p>Bu linki <b>${esc(t.ad)}</b> ile paylaşın. Link tek kullanımlıktır ve yalnızca bu öğretmen kaydına bağlanır.</p>
+      <label class="form tek"><span class="kucuk-yazi soluk">Davet linki</span><input readonly value="${esc(link)}" class="davet-link"></label>
+      <p class="soluk kucuk-yazi">Davet kodu: <b>${kod}</b> (kod, uygulamadaki “Davet koduyla katıl” alanına da yazılabilir)</p>`,
+    butonlar: [
+      { ad: 'WhatsApp ile gönder', tik: () => { window.open('https://wa.me/?text=' + encodeURIComponent(mesaj), '_blank', 'noopener'); return false; } },
+      { ad: 'Linki kopyala', sinif: 'birincil', tik: async g => {
+        try { await navigator.clipboard.writeText(link); bildir('Link kopyalandı'); } catch { $('.davet-link', g).select(); bildir('Linki seçip kopyalayın', 'uyari'); return false; }
+      } },
+    ],
+    acilinca: g => $('.davet-link', g).addEventListener('focus', e => e.target.select()),
   });
 }
 

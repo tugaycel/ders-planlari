@@ -42,13 +42,6 @@ function paraYaz(n) { return (Number(n) || 0).toLocaleString('tr-TR', { style: '
 function trSirala(a, b) { return String(a).localeCompare(String(b), 'tr'); }
 function basHarf(ad) { return String(ad || '?').trim().split(/\s+/).slice(0, 2).map(s => s[0]).join('').toLocaleUpperCase('tr'); }
 
-// PIN'i düz metin saklamamak için basit karma (gerçek güvenlik değildir).
-function basitKarma(s) {
-  let h = 2166136261;
-  for (const c of String(s)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); }
-  return (h >>> 0).toString(36);
-}
-
 function dosyaIndir(ad, icerik, tip) {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([icerik], { type: tip }));

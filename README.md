@@ -1,6 +1,8 @@
 # Özel Ders Programı
 
-Özel ders veren öğretmenler için takvim ve ders takip uygulaması. Kurulum gerektirmez; tarayıcıda çalışır ve GitHub Pages üzerinden bir linkle açılabilir.
+Özel ders veren öğretmenler için takvim ve ders takip uygulaması. Kurulum gerektirmez; tarayıcıda çalışır, GitHub Pages üzerinden bir linkle açılır ve verileri Firebase bulut veritabanında saklar.
+
+Canlı adres: https://tugaycel.github.io/ozel-ders/
 
 ## Özellikler
 
@@ -8,25 +10,33 @@
 - **Ders planları**: tarih, saat, süre, öğretmen, bir ya da birden çok öğrenci (grup dersi), kategori, yer, konu, ders planı ve notlar. Haftalık tekrar ile toplu planlama yapılır. Öğretmen ya da öğrenci çakışmalarında uyarı verilir.
 - **Ders durumu**: planlandı, yapıldı, yapılmadı (nedeniyle), ertelendi (isteğe bağlı yeni tarihle; yeni ders kendiliğinden oluşur). Zamanı geçtiği halde durumu girilmemiş dersler için uyarı gösterilir. Her dersin işlem geçmişi tutulur.
 - **Onay süreci (isteğe bağlı)**: Ayarlar'dan açılır. Açıkken öğretmenin durum bildirimi, sorumlu öğretmen ya da yönetici onaylayana kadar işlenmez. Onaylar sayfasından tek tek ya da toplu olarak onaylanır veya reddedilir.
-- **Öğretmenler**: iki rol vardır: yönetici ve öğretmen. Her öğretmene bir *sorumlu öğretmen* atanabilir. Sorumlu öğretmen, ekibindeki öğretmenlerin adına ders girebilir ve onların bildirimlerini onaylar. Bu sorumluluk zincirleme işler: ekibin ekibi de kapsama girer. İstenirse giriş için PIN konabilir.
+- **Öğretmenler**: iki rol vardır: yönetici ve öğretmen. Her öğretmene bir *sorumlu öğretmen* atanabilir. Sorumlu öğretmen, ekibindeki öğretmenlerin adına ders girebilir ve onların bildirimlerini onaylar. Bu sorumluluk zincirleme işler: ekibin ekibi de kapsama girer. Öğretmenler uygulamaya yöneticinin gönderdiği tek kullanımlık davet linkiyle katılır.
 - **Öğrenciler**: veli ve iletişim bilgileri, sınıf, notlar. Ders almayı bırakan öğrenci pasife alınabilir.
 - **Kategoriler**: ders türleri (Matematik, İngilizce vb.). Her birinin rengi, varsayılan süresi ve ders başı ücreti olur.
 - **Eşleştirmeler**: hangi öğrencinin hangi dersi hangi öğretmenden aldığı tanımlanır. Haftalık ders hedefi ve öğrenciye özel ücret buradan girilir. Ders planlarken eşleştirme seçilirse form kendiliğinden dolar.
 - **Raporlar**: tarih aralığına göre öğretmen, öğrenci ve kategori bazında yapılan, yapılmayan ve ertelenen ders sayıları, gerçekleşme oranı, toplam süre ve tutar. Raporlar CSV olarak (Excel'de açılabilir) indirilebilir.
 - **Yedekleme**: tüm veriler JSON dosyası olarak indirilir ve geri yüklenir.
 
-## Verilerin saklandığı yer (önemli)
+## Veriler ve giriş
 
-Bu sürümde sunucu yok. **Veriler, uygulamanın açıldığı tarayıcıda saklanır** (localStorage).
+Veriler **Firebase** (Google) bulut veritabanında, Frankfurt bölgesinde saklanır. Proje: `ozel-ders-c42ad` (tugaycelikk@gmail.com hesabı, ücretsiz Spark planı).
 
-- Uygulamaya aynı cihazdan ve aynı tarayıcıdan girildiği sürece veriler korunur.
-- Başka bir cihaz kendi ayrı verisiyle başlar. Verileri taşımak için **Ayarlar → Yedek indir** ile dosya alınır, diğer cihazda **Yedekten geri yükle** ile yüklenir.
-- Tarayıcı verilerini temizlemek ya da gizli sekme kullanmak kayıtları siler. Bu yüzden düzenli yedek alın.
-- Aynı cihazı birden çok öğretmen kullanıyorsa her biri kendi adıyla giriş yapar. PIN yalnızca karıştırmayı önlemek içindir; gerçek bir güvenlik önlemi değildir.
+- Herkes kendi e-postası ve şifresiyle giriş yapar. Telefon, tablet ya da bilgisayar fark etmez; aynı takvim görünür ve değişiklikler anında herkese yansır.
+- İnternet kesilse de uygulama çalışır; yapılan değişiklikler bağlantı gelince gönderilir.
+- **Kurum yapısı:** İlk giriş yapan kişi bir kurum oluşturur ve yöneticisi olur. Diğer öğretmenler **Öğretmenler → Davet linki** ile eklenir. Link tek kullanımlıktır ve öğretmen kaydına bağlanır. Her kurumun verisini yalnızca o kurumun üyeleri görebilir; bu kural sunucuda, `firestore.rules` dosyasıyla uygulanır.
+- Bir öğretmen pasife alındığında uygulamaya erişimi de kaldırılır.
+- Rol ve sorumluluk kuralları (kimin kimin adına ders girebileceği, kimin onaylayabileceği) uygulama içinde uygulanır. Sunucu tarafında ise kurum üyeleri birbirine güvenilir kabul edilir.
+- **Ayarlar → Yedek indir** ile tüm veriler JSON olarak indirilebilir, **Yedekten geri yükle** ile geri yüklenebilir.
+
+### Firebase ayarları
+
+- Authentication: E-posta/Şifre girişi açık.
+- Firestore: `(default)` veritabanı, `europe-west3`. Güvenlik kuralları `firestore.rules` dosyasındadır; değiştirildiğinde Firebase konsolunda **Firestore → Rules** sayfasına yapıştırılıp yayınlanmalıdır.
+- Web yapılandırması: `js/firebase-config.js`. Bu değerler gizli değildir; erişimi güvenlik kuralları sınırlar.
 
 ## Yerelde çalıştırma
 
-`index.html` dosyasına çift tıklamak yeterlidir. İsterseniz küçük bir sunucuyla da açabilirsiniz:
+Firebase modülleri nedeniyle dosyaya çift tıklayarak değil, küçük bir sunucuyla açılmalıdır:
 
 ```bash
 python -m http.server 5173
@@ -47,18 +57,13 @@ Ardından tarayıcıda `http://localhost:5173` adresini açın.
    git push -u origin main
    ```
 3. Depoda **Settings → Pages** sayfasına girin. **Source: Deploy from a branch**, **Branch: main / (root)** seçip kaydedin.
-4. Birkaç dakika içinde uygulama `https://KULLANICI_ADINIZ.github.io/ozel-ders/` adresinde açılır. Bu linke sahip olan herkes uygulamayı kendi cihazında, kendi verisiyle kullanabilir.
+4. Birkaç dakika içinde uygulama `https://KULLANICI_ADINIZ.github.io/ozel-ders/` adresinde açılır. Linki açan herkes kendi hesabıyla giriş yapar ve yalnızca üyesi olduğu kurumun verisini görür.
 
-Not: Depo herkese açık olsa bile içinde öğrenci verisi bulunmaz. Veriler yalnızca kullanıcıların tarayıcısında durur.
+Not: Depo herkese açık olsa bile içinde öğrenci verisi bulunmaz. Veriler Firebase veritabanında durur ve yalnızca kurum üyelerine açıktır.
 
-## Sonraki adımlar (sunucu ve alan adı)
+## Alan adı
 
-Veri erişimi tek bir dosyada toplanmıştır: `js/db.js`. Ortak ve çok cihazlı kullanıma geçmek için yalnızca bu katman bir sunucuya bağlanır, örneğin Supabase, Firebase ya da kendi API'niz. Bu geçişle şunlar da eklenebilir:
-
-- gerçek kullanıcı girişi (e-posta ve şifre),
-- tüm öğretmenlerin aynı verileri anlık görmesi,
-- yetki kurallarının sunucuda uygulanması (şu an `js/yetki.js` içinde, tarayıcı tarafındadır),
-- özel alan adı: GitHub Pages'te **Settings → Pages → Custom domain** ile tanımlanır.
+İleride özel alan adı GitHub Pages'te **Settings → Pages → Custom domain** ile tanımlanır. Ardından bu alan adı Firebase konsolunda **Authentication → Settings → Authorized domains** listesine eklenmelidir.
 
 ## Dosya yapısı
 
@@ -66,8 +71,11 @@ Veri erişimi tek bir dosyada toplanmıştır: `js/db.js`. Ortak ve çok cihazl�
 index.html        Giriş sayfası
 css/style.css     Görünüm (açık/koyu tema, mobil uyumlu)
 js/util.js        Tarih ve biçim yardımcıları
-js/db.js          Depolama katmanı (sunucuya geçişte değişecek tek dosya)
-js/yetki.js       Oturum, roller, sorumluluk ve onay yetkileri
+js/db.js          Bellek içi veri katmanı (uygulama buradan okur/yazar)
+js/bulut.js       Firebase: giriş, kurum, davetler, eşitleme
+js/firebase-config.js  Firebase web yapılandırması
+firestore.rules   Firestore güvenlik kuralları
+js/yetki.js       Oturum durumu, roller, sorumluluk ve onay yetkileri
 js/ders.js        Ders iş kuralları: durum, onay, erteleme, ücret
 js/ui.js          Pencere, bildirim ve form yardımcıları
 js/takvim.js      Takvim görünümleri, ders formu, ders detayı

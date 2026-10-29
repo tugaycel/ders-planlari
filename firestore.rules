@@ -1,0 +1,41 @@
+rules_version = '2';
+// Erişim kuralları: her kurumun verisini yalnızca o kurumun üyeleri okuyup yazabilir.
+// Üyelik iki yolla olur: kurumu kuran kişi, ya da geçerli bir davet koduyla katılan kişi.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function girisli() { return request.auth != null; }
+    function uye(k) { return girisli() && exists(/databases/$(database)/documents/kurumlar/$(k)/uyeler/$(request.auth.uid)); }
+
+    // Kullanıcının hangi kuruma bağlı olduğu.
+    match /kullanicilar/{uid} {
+      allow read, write: if girisli() && request.auth.uid == uid;
+    }
+
+    // Davet kodları: kodu bilen, giriş yapmış kişi okuyabilir; listelenemez.
+    match /davetler/{kod} {
+      allow get: if girisli();
+      allow create: if uye(request.resource.data.kurumId);
+      allow delete: if uye(resource.data.kurumId);
+    }
+
+    match /kurumlar/{k} {
+      allow read, update: if uye(k);
+      allow create: if girisli() && request.resource.data.sahip == request.auth.uid;
+
+      match /uyeler/{uid} {
+        allow read: if uye(k);
+        allow create: if girisli() && request.auth.uid == uid && (
+          get(/databases/$(database)/documents/kurumlar/$(k)).data.sahip == request.auth.uid ||
+          (request.resource.data.davetKodu is string &&
+            get(/databases/$(database)/documents/davetler/$(request.resource.data.davetKodu)).data.kurumId == k &&
+            get(/databases/$(database)/documents/davetler/$(request.resource.data.davetKodu)).data.ogretmenId == request.resource.data.ogretmenId));
+        allow update: if girisli() && request.auth.uid == uid && uye(k);
+        allow delete: if uye(k);
+      }
+
+      match /{koleksiyon}/{belge} {
+        allow read, write: if uye(k) && koleksiyon in ['ogretmenler', 'ogrenciler', 'kategoriler', 'eslesmeler', 'dersler'];
+      }
+    }
+  }
+}

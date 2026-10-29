@@ -411,6 +411,15 @@ input[type=checkbox], input[type=radio] { width: auto; min-height: 0; accent-col
 .ayrac { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12px; }
 .ayrac::before, .ayrac::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 
+.buton-satir.orta { justify-content: center; gap: 16px; margin-top: 0; }
+.giris-kart .bolum { margin: 8px 0 0; }
+.giris-kart > .link { align-self: center; }
+.donen {
+  width: 32px; height: 32px; border-radius: 50%; align-self: center;
+  border: 3px solid var(--line); border-top-color: var(--accent); animation: don .8s linear infinite;
+}
+@keyframes don { to { transform: rotate(360deg); } }
+
 /* ---------- Bildirim ---------- */
 #toast-root { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 60; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; width: max-content; max-width: calc(100vw - 32px); }
 .toast { background: var(--text); color: var(--panel); padding: 10px 16px; border-radius: 10px; box-shadow: var(--shadow-lg); font-weight: 550; transition: opacity .3s, transform .3s; }

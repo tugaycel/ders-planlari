@@ -1,65 +1,55 @@
 'use strict';
-// Depolama katmanı. Şimdilik tarayıcının localStorage'ını kullanır.
-// İleride sunucuya geçerken yalnızca bu dosyanın içi değişmelidir;
-// uygulamanın geri kalanı sadece DB.* fonksiyonlarını kullanır.
+// Veri katmanı. Uygulama verileri bellekteki bir önbellekten okur (eşzamanlı);
+// yazmalar önbelleğe hemen işlenir ve bağlı arka uca (Firebase, js/bulut.js) gönderilir.
+// Arka uçtan gelen değişiklikler _degisiklikleriUygula ile önbelleğe yansır.
+
+const KOLEKSIYONLAR = ['ogretmenler', 'ogrenciler', 'kategoriler', 'eslesmeler', 'dersler'];
 
 const DB = (() => {
-  const ANAHTAR = 'ozelders.veri.v1';
-  const KOLEKSIYONLAR = ['ogretmenler', 'ogrenciler', 'kategoriler', 'eslesmeler', 'dersler'];
-
-  const varsayilan = () => ({
-    surum: 1,
-    ayarlar: {
-      kurumAdi: 'Özel Ders Programı',
-      onaySureci: false,
-      gunBasi: 8,
-      gunSonu: 22,
-      haftaBasi: 1,
-      varsayilanSure: 60,
-    },
-    ogretmenler: [], ogrenciler: [], kategoriler: [], eslesmeler: [], dersler: [],
+  const varsayilanAyarlar = () => ({
+    kurumAdi: 'Özel Ders Programı',
+    onaySureci: false,
+    gunBasi: 8,
+    gunSonu: 22,
+    haftaBasi: 1,
+    varsayilanSure: 60,
   });
+  const bos = () => ({ ayarlar: varsayilanAyarlar(), ogretmenler: [], ogrenciler: [], kategoriler: [], eslesmeler: [], dersler: [] });
 
-  function normallestir(d) {
-    const temel = varsayilan();
-    const sonuc = { ...temel, ...d, ayarlar: { ...temel.ayarlar, ...(d.ayarlar || {}) } };
-    KOLEKSIYONLAR.forEach(k => { if (!Array.isArray(sonuc[k])) sonuc[k] = []; });
-    return sonuc;
-  }
-
-  function yukle() {
-    try {
-      const ham = localStorage.getItem(ANAHTAR);
-      return ham ? normallestir(JSON.parse(ham)) : varsayilan();
-    } catch (e) {
-      console.error('Veri okunamadı', e);
-      return varsayilan();
-    }
-  }
-
-  let veri = yukle();
+  let veri = bos();
+  let arka = null;
   const dinleyiciler = new Set();
   let islemDerinligi = 0;
   let kirli = false;
 
-  function kaydet() {
+  function haberVer() {
     if (islemDerinligi) { kirli = true; return; }
-    try {
-      localStorage.setItem(ANAHTAR, JSON.stringify(veri));
-    } catch (e) {
-      alert('Veriler kaydedilemedi: ' + e.message);
-    }
     dinleyiciler.forEach(f => f());
   }
+  // Firestore undefined değer kabul etmez; JSON gidiş-dönüşü bunları ayıklar.
+  const temiz = n => JSON.parse(JSON.stringify(n));
+  // Açık pencerelerdeki nesne referansları bozulmasın diye nesneyi yerinde günceller.
+  function yerindeGuncelle(hedef, kaynak) {
+    Object.keys(hedef).forEach(k => { if (!(k in kaynak)) delete hedef[k]; });
+    Object.assign(hedef, kaynak);
+  }
 
-  // Aynı cihazda başka sekmede yapılan değişiklikleri yakala.
-  window.addEventListener('storage', e => {
-    if (e.key === ANAHTAR) { veri = yukle(); dinleyiciler.forEach(f => f()); }
-  });
+  function normallestir(d) {
+    const sonuc = bos();
+    sonuc.ayarlar = { ...sonuc.ayarlar, ...(d.ayarlar || {}) };
+    KOLEKSIYONLAR.forEach(k => { sonuc[k] = Array.isArray(d[k]) ? d[k].filter(x => x && x.id) : []; });
+    return sonuc;
+  }
 
   return {
+    varsayilanAyarlar,
+    yeniId: () => uid(),
     ayarlar: () => veri.ayarlar,
-    ayarKaydet(degisiklik) { Object.assign(veri.ayarlar, degisiklik); kaydet(); },
+    ayarKaydet(degisiklik) {
+      Object.assign(veri.ayarlar, degisiklik);
+      arka?.ayarYaz(temiz(veri.ayarlar));
+      haberVer();
+    },
     list: k => veri[k],
     get: (k, id) => veri[k].find(x => x.id === id),
     save(k, nesne) {
@@ -68,26 +58,56 @@ const DB = (() => {
       nesne.guncelleme = simdi;
       const i = veri[k].findIndex(x => x.id === nesne.id);
       if (i >= 0) veri[k][i] = nesne; else veri[k].push(nesne);
-      kaydet();
+      arka?.yaz(k, temiz(nesne));
+      haberVer();
       return nesne;
     },
-    remove(k, id) { veri[k] = veri[k].filter(x => x.id !== id); kaydet(); },
-    // Birden çok değişikliği tek kayıtla yapar.
+    remove(k, id) {
+      veri[k] = veri[k].filter(x => x.id !== id);
+      arka?.sil(k, id);
+      haberVer();
+    },
+    // Birden çok değişikliği tek ekran yenilemesiyle yapar.
     tx(fn) {
       islemDerinligi++;
       try { return fn(); } finally {
         islemDerinligi--;
-        if (!islemDerinligi && kirli) { kirli = false; kaydet(); }
+        if (!islemDerinligi && kirli) { kirli = false; haberVer(); }
       }
     },
-    disaAktar: () => JSON.stringify(veri, null, 2),
-    iceAktar(metin) {
-      const d = typeof metin === 'string' ? JSON.parse(metin) : metin;
+    disaAktar: () => JSON.stringify({ surum: 1, ...veri }, null, 2),
+    // Tüm verileri verilen yedekle değiştirir.
+    async iceAktar(metinYaDaNesne) {
+      const d = typeof metinYaDaNesne === 'string' ? JSON.parse(metinYaDaNesne) : metinYaDaNesne;
       if (!d || !Array.isArray(d.ogretmenler)) throw new Error('Geçersiz yedek dosyası');
-      veri = normallestir(d);
-      kaydet();
+      const yeni = normallestir(d);
+      await arka?.hepsiniDegistir(veri, temiz(yeni));
+      veri = yeni;
+      haberVer();
     },
-    sifirla() { veri = varsayilan(); kaydet(); },
+    async sifirla() {
+      const yeni = bos();
+      yeni.ayarlar = veri.ayarlar;
+      yeni.ogretmenler = veri.ogretmenler;
+      await arka?.hepsiniDegistir(veri, temiz(yeni));
+      veri = yeni;
+      haberVer();
+    },
     onChange(f) { dinleyiciler.add(f); },
+
+    // --- Arka uç tarafından kullanılır ---
+    _baglan(a) { arka = a; },
+    _temizle() { veri = bos(); },
+    _ayarlarUygula(a) { veri.ayarlar = { ...varsayilanAyarlar(), ...a }; haberVer(); },
+    _degisiklikleriUygula(k, degisiklikler) {
+      const liste = veri[k];
+      degisiklikler.forEach(({ tur, id, belge }) => {
+        const i = liste.findIndex(x => x.id === id);
+        if (tur === 'removed') { if (i >= 0) liste.splice(i, 1); return; }
+        const n = { ...belge, id };
+        if (i >= 0) yerindeGuncelle(liste[i], n); else liste.push(n);
+      });
+      haberVer();
+    },
   };
 })();

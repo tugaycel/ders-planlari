@@ -1,5 +1,5 @@
 'use strict';
-// Uygulama kabuğu: kurulum, giriş, menü ve sayfa yönlendirme.
+// Uygulama kabuğu: giriş, kurum kurulumu, menü ve sayfa yönlendirme.
 
 const SAYFALAR = [
   { id: 'takvim', ad: 'Takvim', ikon: '📅', view: takvimView },
@@ -20,10 +20,15 @@ function aktifSayfa() {
 
 function render() {
   const app = $('#app');
-  document.title = DB.ayarlar().kurumAdi;
-  if (!DB.list('ogretmenler').length) return kurulumEkrani(app);
+  document.title = Oturum.durum === 'hazir' ? DB.ayarlar().kurumAdi : 'Özel Ders Programı';
+  if (Oturum.durum === 'yukleniyor') return bilgiEkrani(app, '<div class="donen" aria-label="Yükleniyor"></div><p class="soluk">Yükleniyor…</p>');
+  if (Oturum.durum === 'giris') return girisEkrani(app);
+  if (Oturum.durum === 'kurulum') return kurulumEkrani(app);
+  if (Oturum.durum === 'hata') return bilgiEkrani(app, `<h1>Bir sorun oluştu</h1><p class="kutu hata">${esc(Oturum.hata)}</p>`, true);
+
   const u = Oturum.kullanici();
-  if (!u || u.pasif) return girisEkrani(app);
+  if (!u) return kimlikEkrani(app);
+  if (u.pasif) return bilgiEkrani(app, '<h1>Hesabınız pasif</h1><p class="soluk">Bu kurumda pasif olarak işaretlendiniz. Yöneticinizle görüşün.</p>', true);
 
   const sayfa = aktifSayfa();
   const bekleyen = onayBekleyenler(u).length;
@@ -42,83 +47,141 @@ function render() {
     </div>`;
   $('.kullanici', app).onclick = e => {
     const act = e.target.closest('[data-act]')?.dataset.act;
-    if (act === 'cikis') { Oturum.cikis(); render(); }
+    if (act === 'cikis') Oturum.cikis();
     if (act === 'profil') ogretmenFormu(u);
   };
   sayfa.view($('#icerik'), u);
 }
 
-function kurulumEkrani(app) {
-  app.innerHTML = `
-    <div class="giris"><div class="giris-kart">
-      <span class="logo buyuk">ÖD</span>
-      <h1>Özel ders programına hoş geldiniz</h1>
-      <p class="soluk">İlk kurulum: kendinizi yönetici olarak tanımlayın. Diğer öğretmenleri, öğrencileri ve dersleri sonra eklersiniz.</p>
-      <form class="form tek" id="kurulum" onsubmit="return false">
-        <label>Kurum / program adı<input name="kurumAdi" placeholder="Örn. Kaya Özel Ders"></label>
-        <label>Adınız soyadınız *<input name="ad" required autocomplete="name"></label>
-        <label>Giriş PIN'i (isteğe bağlı)<input name="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password" placeholder="4–6 hane"></label>
-        <div class="form-hata-yer"></div>
-        <button class="btn birincil genis-btn" data-act="basla">Başla</button>
-      </form>
-      <div class="ayrac"><span>ya da</span></div>
-      <button class="btn genis-btn" data-act="demo">Demo verilerle dene</button>
-      <p class="not">Veriler yalnızca bu cihazdaki tarayıcıda saklanır.</p>
-    </div></div>`;
-  app.onclick = null;
-  $('.giris-kart', app).onclick = e => {
-    const act = e.target.closest('[data-act]')?.dataset.act;
-    if (act === 'demo') return demoYukle();
-    if (act !== 'basla') return;
-    const form = $('#kurulum', app);
-    const f = formOku(form);
-    if (!f.ad) return hataGoster($('.form-hata-yer', form), 'Adınızı yazın.');
-    if (f.pin && !/^\d{4,6}$/.test(f.pin)) return hataGoster($('.form-hata-yer', form), 'PIN 4–6 haneli rakam olmalı.');
-    DB.tx(() => {
-      if (f.kurumAdi) DB.ayarKaydet({ kurumAdi: f.kurumAdi });
-      const t = DB.save('ogretmenler', { ad: f.ad, rol: 'yonetici', sorumluId: null, brans: '', telefon: '', eposta: '', renk: RENKLER[0], ...(f.pin ? { pin: basitKarma(f.pin) } : {}) });
-      Oturum.giris(t.id);
-    });
-    location.hash = '#/kategoriler';
-  };
+function kartEkrani(app, icerik) {
+  app.innerHTML = `<div class="giris"><div class="giris-kart"><span class="logo buyuk">ÖD</span>${icerik}</div></div>`;
+  return $('.giris-kart', app);
+}
+
+function bilgiEkrani(app, icerik, cikisli = false) {
+  const kart = kartEkrani(app, icerik + (cikisli ? `<button class="btn genis-btn" data-act="cikis">Çıkış yap${Oturum.eposta ? ` (${esc(Oturum.eposta)})` : ''}</button>` : ''));
+  kart.onclick = e => { if (e.target.closest('[data-act=cikis]')) Oturum.cikis(); };
 }
 
 function girisEkrani(app) {
-  const ogretmenler = DB.list('ogretmenler').filter(t => !t.pasif).sort((a, b) => trSirala(a.ad, b.ad));
-  app.innerHTML = `
-    <div class="giris"><div class="giris-kart">
-      <span class="logo buyuk">ÖD</span>
-      <h1>${esc(DB.ayarlar().kurumAdi)}</h1>
-      <p class="soluk">Devam etmek için kendinizi seçin</p>
-      <div class="kisi-liste">${ogretmenler.map(t => `
-        <button class="kisi" data-id="${t.id}">${avatar(t)}<span><b>${esc(t.ad)}</b><small>${rolAdi(t)}${t.brans ? ' · ' + esc(t.brans) : ''}</small></span>${t.pin ? '<span class="kilit" title="PIN korumalı">🔒</span>' : ''}</button>`).join('')}
+  let kayit = Oturum.davetVar;
+  const ciz = () => {
+    const kart = kartEkrani(app, `
+      <h1>${kayit ? 'Hesap oluştur' : 'Giriş yap'}</h1>
+      ${Oturum.davetVar ? '<div class="kutu bilgi">Bir kuruma davet edildiniz. Hesap oluşturun ya da mevcut hesabınızla giriş yapın; kuruma otomatik katılacaksınız.</div>' : '<p class="soluk">Özel ders takvimine e-posta ve şifrenizle girin.</p>'}
+      <form class="form tek" id="giris-form">
+        <label>E-posta<input name="eposta" type="email" autocomplete="email" required></label>
+        <label>Şifre<input name="sifre" type="password" autocomplete="${kayit ? 'new-password' : 'current-password'}" minlength="6" required></label>
+        ${kayit ? '<label>Şifre (tekrar)<input name="sifre2" type="password" autocomplete="new-password" minlength="6" required></label>' : ''}
+        <div class="form-hata-yer"></div>
+        <button class="btn birincil genis-btn" type="submit">${kayit ? 'Hesap oluştur' : 'Giriş yap'}</button>
+      </form>
+      <div class="buton-satir orta">
+        <button class="link" data-act="degistir">${kayit ? 'Hesabım var, giriş yap' : 'Hesabım yok, oluştur'}</button>
+        ${kayit ? '' : '<button class="link" data-act="sifre">Şifremi unuttum</button>'}
       </div>
-      <p class="not">Veriler bu cihazdaki tarayıcıda saklanır.</p>
-    </div></div>`;
-  $('.kisi-liste', app).onclick = e => {
+      <p class="not">Veriler güvenli bulut veritabanında saklanır; tüm cihazlarınızda aynı takvimi görürsünüz.</p>`);
+    const form = $('#giris-form', kart);
+    const hata = m => hataGoster($('.form-hata-yer', form), m);
+    form.onsubmit = async e => {
+      e.preventDefault();
+      const f = formOku(form);
+      if (kayit && f.sifre !== f.sifre2) return hata('Şifreler aynı değil.');
+      const btn = $('button[type=submit]', form);
+      btn.disabled = true;
+      try {
+        await (kayit ? Bulut.kayitOl(f.eposta, f.sifre) : Bulut.girisYap(f.eposta, f.sifre));
+      } catch (err) {
+        hata(Bulut.hataMetni(err));
+        btn.disabled = false;
+      }
+    };
+    kart.onclick = async e => {
+      const act = e.target.closest('[data-act]')?.dataset.act;
+      if (act === 'degistir') { kayit = !kayit; ciz(); }
+      if (act === 'sifre') {
+        const eposta = formOku(form).eposta;
+        if (!eposta) return hata('Önce e-posta adresinizi yazın.');
+        try {
+          await Bulut.sifreSifirla(eposta);
+          bildir('Şifre sıfırlama bağlantısı e-postanıza gönderildi');
+        } catch (err) { hata(Bulut.hataMetni(err)); }
+      }
+    };
+  };
+  if (!window.Bulut) return bilgiEkrani(app, '<div class="donen"></div><p class="soluk">Bağlanıyor…</p>');
+  ciz();
+}
+
+function kurulumEkrani(app) {
+  const kart = kartEkrani(app, `
+    <h1>Hoş geldiniz</h1>
+    <p class="soluk">${esc(Oturum.eposta)} hesabı henüz bir kuruma bağlı değil.</p>
+    ${Oturum.hata ? `<div class="kutu uyari">${esc(Oturum.hata)}</div>` : ''}
+    <h2 class="bolum">Yeni kurum oluştur</h2>
+    <p class="soluk kucuk-yazi">Kurumun yöneticisi siz olursunuz; diğer öğretmenleri davet linkiyle eklersiniz.</p>
+    <form class="form tek" id="kurulum">
+      <label>Kurum / program adı<input name="kurumAdi" placeholder="Örn. Kaya Özel Ders"></label>
+      <label>Adınız soyadınız *<input name="ad" required autocomplete="name"></label>
+      <div class="form-hata-yer"></div>
+      <button class="btn birincil genis-btn" type="submit">Kurumu oluştur</button>
+      <button class="btn genis-btn" type="button" data-act="demo">Demo verilerle oluştur</button>
+    </form>
+    <div class="ayrac"><span>ya da</span></div>
+    <h2 class="bolum">Davet koduyla katıl</h2>
+    <form class="form tek" id="davet">
+      <label>Davet kodu<input name="kod" autocomplete="off" placeholder="Yöneticinizin gönderdiği kod"></label>
+      <button class="btn genis-btn" type="submit">Katıl</button>
+    </form>
+    <button class="link" data-act="cikis">Farklı hesapla giriş yap</button>`);
+  const kurulum = $('#kurulum', kart);
+  const isle = async (btn, fn) => {
+    btn.disabled = true;
+    try { await fn(); } catch (err) {
+      console.error(err);
+      hataGoster($('.form-hata-yer', kurulum), Bulut.hataMetni(err));
+      btn.disabled = false;
+    }
+  };
+  kurulum.onsubmit = e => {
+    e.preventDefault();
+    const f = formOku(kurulum);
+    if (!f.ad) return hataGoster($('.form-hata-yer', kurulum), 'Adınızı yazın.');
+    isle(e.submitter || $('button[type=submit]', kurulum), async () => {
+      await Bulut.kurumOlustur({ kurumAdi: f.kurumAdi, ad: f.ad });
+      location.hash = '#/kategoriler';
+    });
+  };
+  $('#davet', kart).onsubmit = e => {
+    e.preventDefault();
+    const kod = formOku(e.target).kod;
+    if (kod) isle(e.submitter, () => Bulut.davetKoduIleKatil(kod));
+  };
+  kart.addEventListener('click', e => {
+    const act = e.target.closest('[data-act]')?.dataset.act;
+    if (act === 'cikis') Oturum.cikis();
+    if (act === 'demo') isle(e.target, () => Bulut.kurumOlustur({ kurumAdi: formOku(kurulum).kurumAdi, demoVeri: demoVerisi() }));
+  });
+}
+
+// Oturumdaki hesap kurumdaki hiçbir öğretmen kaydıyla eşleşmiyorsa (ör. yedekten yükleme sonrası).
+function kimlikEkrani(app) {
+  const ogretmenler = DB.list('ogretmenler').filter(t => !t.pasif).sort((a, b) => trSirala(a.ad, b.ad));
+  const kart = kartEkrani(app, `
+    <h1>Siz hangisisiniz?</h1>
+    <p class="soluk">${esc(Oturum.eposta)} hesabını kurumdaki öğretmen kaydınızla eşleştirin.</p>
+    <div class="kisi-liste">${ogretmenler.map(t => `
+      <button class="kisi" data-id="${t.id}">${avatar(t)}<span><b>${esc(t.ad)}</b><small>${rolAdi(t)}${t.hesapEposta ? ' · ' + esc(t.hesapEposta) : ''}</small></span></button>`).join('')}
+    </div>
+    <button class="link" data-act="cikis">Çıkış yap</button>`);
+  kart.onclick = async e => {
+    if (e.target.closest('[data-act=cikis]')) return Oturum.cikis();
     const id = e.target.closest('[data-id]')?.dataset.id;
     if (!id) return;
-    const t = DB.get('ogretmenler', id);
-    if (!t.pin) { Oturum.giris(id); return render(); }
-    modal({
-      baslik: `${t.ad} — PIN`,
-      icerik: `<form class="form tek" onsubmit="return false"><label>PIN<input name="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="current-password"></label></form>`,
-      butonlar: [{ ad: 'Vazgeç' }, {
-        ad: 'Giriş', sinif: 'birincil', tik: g => {
-          if (basitKarma(formOku(g).pin) !== t.pin) return hataGoster(g, 'PIN hatalı.');
-          Oturum.giris(id);
-          render();
-        },
-      }],
-      acilinca: g => {
-        const inp = $('input', g);
-        inp.focus();
-        inp.addEventListener('keydown', e => { if (e.key === 'Enter') $('.modal-alt .birincil').click(); });
-      },
-    });
+    try { await Bulut.kimligimiSec(id); } catch (err) { bildir(Bulut.hataMetni(err), 'hata'); }
   };
 }
 
-DB.onChange(render);
+DB.onChange(() => { if (Oturum.durum === 'hazir') render(); });
 window.addEventListener('hashchange', () => { Takvim.kaydirma = null; render(); window.scrollTo(0, 0); });
 render();

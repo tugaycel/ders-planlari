@@ -4,14 +4,15 @@
 //  - Öğretmen: kendi derslerini ve sorumlusu olduğu öğretmenlerin (alt ekibinin)
 //    derslerini girebilir. Ekibinin bildirimlerini onaylayabilir.
 
+// durum: yukleniyor | giris | kurulum | hazir | hata  (js/bulut.js günceller)
 const Oturum = {
-  ANAHTAR: 'ozelders.oturum',
-  kullanici() {
-    const id = localStorage.getItem(this.ANAHTAR);
-    return id ? DB.get('ogretmenler', id) || null : null;
-  },
-  giris(id) { localStorage.setItem(this.ANAHTAR, id); },
-  cikis() { localStorage.removeItem(this.ANAHTAR); },
+  durum: 'yukleniyor',
+  hata: '',
+  eposta: '',
+  ogretmenId: null,
+  davetVar: false,
+  kullanici() { return this.ogretmenId ? DB.get('ogretmenler', this.ogretmenId) || null : null; },
+  cikis() { window.Bulut?.cikis(); },
 };
 
 function yoneticiMi(u) { return !!u && u.rol === 'yonetici'; }

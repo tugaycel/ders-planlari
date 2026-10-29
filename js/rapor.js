@@ -109,14 +109,14 @@ function ayarlarView(el, u) {
     </section>` : ''}
     <section class="panel">
       <h2 class="bolum">Veriler</h2>
-      <p class="soluk">Tüm veriler <b>bu cihazdaki tarayıcıda</b> saklanır (${sayilar}). Tarayıcı verilerini temizlemek kayıtları siler; düzenli yedek alın. Yedek dosyasını başka bir cihaza yükleyerek verileri taşıyabilirsiniz.</p>
+      <p class="soluk">Veriler bulut veritabanında saklanır ve kurumdaki herkesin cihazında eşitlenir (${sayilar}). İnternet yokken yapılan değişiklikler bağlantı gelince gönderilir. İsterseniz ayrıca yedek dosyası alabilirsiniz.</p>
       <div class="buton-satir">
         <button class="btn" data-act="yedek">⬇ Yedek indir (JSON)</button>
         ${yon ? `<label class="btn">⬆ Yedekten geri yükle<input type="file" accept=".json,application/json" data-act="geriyukle" hidden></label>` : ''}
       </div>
       ${yon ? `<div class="buton-satir tehlike-alan">
         <button class="btn" data-act="demo">Demo verilerini yükle</button>
-        <button class="btn tehlike" data-act="sifirla">Tüm verileri sil</button>
+        <button class="btn tehlike" data-act="sifirla">Ders ve öğrenci verilerini sil</button>
       </div>` : ''}
     </section>`;
 
@@ -130,15 +130,17 @@ function ayarlarView(el, u) {
       return bildir('Ayarlar kaydedildi');
     }
     if (act === 'yedek') return dosyaIndir(`ozel-ders-yedek-${bugun()}.json`, DB.disaAktar(), 'application/json');
-    if (act === 'demo') {
-      if (await onayKutusu('Mevcut tüm veriler silinip yerine demo verileri yüklenecek. Devam edilsin mi?', { evet: 'Demo yükle', tehlike: true })) demoYukle();
-      return;
-    }
-    if (act === 'sifirla') {
-      if (await onayKutusu('Bu cihazdaki <b>tüm veriler kalıcı olarak silinecek</b>. Önce yedek almanız önerilir. Devam edilsin mi?', { evet: 'Tümünü sil', tehlike: true })) {
-        DB.sifirla();
-        Oturum.cikis();
+    try {
+      if (act === 'demo' && await onayKutusu('Kurumdaki <b>tüm veriler herkes için silinip</b> yerine demo verileri yüklenecek. Devam edilsin mi?', { evet: 'Demo yükle', tehlike: true })) {
+        await demoYukle();
       }
+      if (act === 'sifirla' && await onayKutusu('Kurumdaki tüm öğrenci, kategori, eşleştirme ve ders kayıtları <b>herkes için kalıcı olarak silinecek</b>. Öğretmenler ve ayarlar kalır. Önce yedek almanız önerilir. Devam edilsin mi?', { evet: 'Sil', tehlike: true })) {
+        await DB.sifirla();
+        bildir('Veriler silindi');
+      }
+    } catch (err) {
+      console.error(err);
+      bildir('İşlem tamamlanamadı: ' + Bulut.hataMetni(err), 'hata');
     }
   };
   el.onchange = async e => {
@@ -148,14 +150,15 @@ function ayarlarView(el, u) {
     try {
       const metin = await dosya.text();
       JSON.parse(metin);
-      if (await onayKutusu(`“${esc(dosya.name)}” yüklenecek ve <b>mevcut veriler bununla değiştirilecek</b>. Devam edilsin mi?`, { evet: 'Geri yükle', tehlike: true })) {
-        DB.iceAktar(metin);
-        if (!Oturum.kullanici()) Oturum.cikis();
+      if (await onayKutusu(`“${esc(dosya.name)}” yüklenecek ve kurumdaki <b>mevcut veriler herkes için bununla değiştirilecek</b>. Devam edilsin mi?`, { evet: 'Geri yükle', tehlike: true })) {
+        bildir('Yükleniyor…');
+        await DB.iceAktar(metin);
         bildir('Yedek geri yüklendi');
         render();
       }
     } catch (err) {
-      bildir('Dosya okunamadı: ' + err.message, 'hata');
+      console.error(err);
+      bildir('Yüklenemedi: ' + (window.Bulut ? Bulut.hataMetni(err) : err.message), 'hata');
     }
   };
 }

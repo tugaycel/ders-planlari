@@ -1,7 +1,8 @@
 'use strict';
 // Denemek için örnek veri seti: bugünün iki hafta öncesi ve sonrası.
+// İlk öğretmen (t1, yönetici) oturumdaki kullanıcıyla eşleştirilir.
 
-function demoYukle() {
+function demoVerisi() {
   const ogr = (id, ad, sinif, veli, telefon) => ({ id, ad, sinif, veli, telefon, veliTelefon: '', eposta: '', okul: '', notlar: '', pasif: false });
   const veri = {
     ayarlar: { kurumAdi: 'Demo Özel Ders', onaySureci: true, gunBasi: 9, gunSonu: 21, haftaBasi: 1, varsayilanSure: 60 },
@@ -66,7 +67,24 @@ function demoYukle() {
       veri.dersler.push(d);
     });
   }
-  Oturum.giris('t1');
-  DB.iceAktar(veri);
-  bildir('Demo verileri yüklendi — Elif Kaya (yönetici) olarak giriş yapıldı');
+  return veri;
+}
+
+async function demoYukle() {
+  const veri = demoVerisi();
+  const ben = Oturum.kullanici();
+  // Oturumdaki kullanıcı demodaki yönetici olur; hesabı korunur.
+  if (ben) Object.assign(veri.ogretmenler[0], { id: ben.id, ad: ben.ad, uid: ben.uid, hesapEposta: ben.hesapEposta });
+  const eskiId = 't1';
+  if (ben) {
+    veri.ogretmenler.forEach(t => { if (t.sorumluId === eskiId) t.sorumluId = ben.id; });
+    veri.eslesmeler.forEach(e => { if (e.ogretmenId === eskiId) e.ogretmenId = ben.id; });
+    veri.dersler.forEach(d => {
+      if (d.ogretmenId === eskiId) d.ogretmenId = ben.id;
+      if (d.onaylayan === eskiId) d.onaylayan = ben.id;
+      (d.gecmis || []).forEach(g => { if (g.kim === eskiId) g.kim = ben.id; });
+    });
+  }
+  await DB.iceAktar(veri);
+  bildir('Demo verileri yüklendi');
 }

@@ -2,12 +2,12 @@
 // Kendi dosyalarımız için "önce ağ" kullanılır, böylece yeni sürümler hemen gelir.
 // Firebase SDK dosyaları sürüm numaralı olduğu için "önce önbellek" kullanılır.
 // Veritabanı ve giriş istekleri (googleapis.com) hiç önbelleğe alınmaz.
-const ONBELLEK = 'ozel-ders-v1';
+const ONBELLEK = 'ders-planlari-v3';
 const KABUK = [
   './', 'index.html', 'manifest.webmanifest', 'css/style.css',
   'js/util.js', 'js/db.js', 'js/yetki.js', 'js/ders.js', 'js/ui.js', 'js/takvim.js', 'js/liste.js',
   'js/yonetim.js', 'js/rapor.js', 'js/demo.js', 'js/app.js', 'js/bulut.js', 'js/firebase-config.js',
-  'icons/icon-192.png', 'icons/icon-512.png',
+  'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
 ];
 
 self.addEventListener('install', e => {
@@ -26,7 +26,8 @@ self.addEventListener('fetch', e => {
   const url = new URL(istek.url);
 
   if (url.origin === location.origin) {
-    e.respondWith(fetch(istek).then(yanit => {
+    // no-cache: tarayıcının HTTP önbelleği yerine sunucuya sorulur (GitHub Pages 10 dk önbellekler).
+    e.respondWith(fetch(istek, { cache: 'no-cache' }).then(yanit => {
       if (yanit.ok) { const kopya = yanit.clone(); caches.open(ONBELLEK).then(c => c.put(istek, kopya)); }
       return yanit;
     }).catch(() => caches.match(istek, { ignoreSearch: true }).then(y => y || caches.match('index.html'))));

@@ -7,7 +7,7 @@ const KOLEKSIYONLAR = ['ogretmenler', 'ogrenciler', 'kategoriler', 'eslesmeler',
 
 const DB = (() => {
   const varsayilanAyarlar = () => ({
-    kurumAdi: 'Özel Ders Programı',
+    kurumAdi: 'Ders Planları',
     onaySureci: false,
     gunBasi: 8,
     gunSonu: 22,

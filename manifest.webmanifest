@@ -1,7 +1,7 @@
 {
-  "name": "Özel Ders Programı",
-  "short_name": "Özel Ders",
-  "description": "Özel ders takvimi, ders planları ve ders takibi",
+  "name": "Ders Planları",
+  "short_name": "Ders Planları",
+  "description": "Ders takvimi, ders planları ve ders takibi",
   "lang": "tr",
   "id": "./",
   "start_url": "./",

@@ -126,7 +126,7 @@ function ayarlarView(el, u) {
       const f = formOku($('#ayar-form', el));
       const gunBasi = Math.min(23, Math.max(0, Number(f.gunBasi) || 0));
       const gunSonu = Math.min(24, Math.max(gunBasi + 1, Number(f.gunSonu) || 24));
-      DB.ayarKaydet({ kurumAdi: f.kurumAdi || 'Özel Ders Programı', gunBasi, gunSonu, haftaBasi: Number(f.haftaBasi), varsayilanSure: Number(f.varsayilanSure) || 60, onaySureci: !!f.onaySureci });
+      DB.ayarKaydet({ kurumAdi: f.kurumAdi || 'Ders Planları', gunBasi, gunSonu, haftaBasi: Number(f.haftaBasi), varsayilanSure: Number(f.varsayilanSure) || 60, onaySureci: !!f.onaySureci });
       return bildir('Ayarlar kaydedildi');
     }
     if (act === 'yedek') return dosyaIndir(`ozel-ders-yedek-${bugun()}.json`, DB.disaAktar(), 'application/json');

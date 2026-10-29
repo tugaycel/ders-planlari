@@ -1,6 +1,6 @@
-# Özel Ders Programı
+# Ders Planları
 
-Özel ders veren öğretmenler için takvim ve ders takip uygulaması. Kurulum gerektirmez; tarayıcıda çalışır, GitHub Pages üzerinden bir linkle açılır ve verileri Firebase bulut veritabanında saklar.
+Ders veren öğretmenler için takvim ve ders takip uygulaması. Kurulum gerektirmez; tarayıcıda çalışır, GitHub Pages üzerinden bir linkle açılır ve verileri Firebase bulut veritabanında saklar.
 
 Canlı adres: https://tugaycel.github.io/ozel-ders/
 

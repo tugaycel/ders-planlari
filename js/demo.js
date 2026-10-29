@@ -5,7 +5,7 @@
 function demoVerisi() {
   const ogr = (id, ad, sinif, veli, telefon) => ({ id, ad, sinif, veli, telefon, veliTelefon: '', eposta: '', okul: '', notlar: '', pasif: false });
   const veri = {
-    ayarlar: { kurumAdi: 'Demo Özel Ders', onaySureci: true, gunBasi: 9, gunSonu: 21, haftaBasi: 1, varsayilanSure: 60 },
+    ayarlar: { kurumAdi: 'Demo Ders Planları', onaySureci: true, gunBasi: 9, gunSonu: 21, haftaBasi: 1, varsayilanSure: 60 },
     ogretmenler: [
       { id: 't1', ad: 'Elif Kaya', rol: 'yonetici', sorumluId: null, brans: 'İngilizce', telefon: '0555 000 00 01', eposta: '', renk: '#4f46e5' },
       { id: 't2', ad: 'Mert Demir', rol: 'ogretmen', sorumluId: 't1', brans: 'Matematik', telefon: '0555 000 00 02', eposta: '', renk: '#059669' },

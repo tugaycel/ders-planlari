@@ -20,7 +20,7 @@ function aktifSayfa() {
 
 function render() {
   const app = $('#app');
-  document.title = Oturum.durum === 'hazir' ? DB.ayarlar().kurumAdi : 'Özel Ders Programı';
+  document.title = Oturum.durum === 'hazir' ? DB.ayarlar().kurumAdi : 'Ders Planları';
   if (Oturum.durum === 'yukleniyor') return bilgiEkrani(app, '<div class="donen" aria-label="Yükleniyor"></div><p class="soluk">Yükleniyor…</p>');
   if (Oturum.durum === 'giris') return girisEkrani(app);
   if (Oturum.durum === 'kurulum') return kurulumEkrani(app);
@@ -35,7 +35,7 @@ function render() {
   app.innerHTML = `
     <div class="kabuk">
       <aside class="yan">
-        <div class="marka"><span class="logo">ÖD</span><span>${esc(DB.ayarlar().kurumAdi)}</span></div>
+        <div class="marka"><span class="logo">DP</span><span>${esc(DB.ayarlar().kurumAdi)}</span></div>
         <nav>${SAYFALAR.map(s => `<a href="#/${s.id}" class="${s === sayfa ? 'aktif' : ''}" ${s === sayfa ? 'aria-current="page"' : ''}>
           <span class="nav-ikon" aria-hidden="true">${s.ikon}</span><span>${s.ad}</span>${s.id === 'onaylar' && bekleyen ? `<b class="sayac">${bekleyen}</b>` : ''}</a>`).join('')}</nav>
         <div class="kullanici">
@@ -54,7 +54,7 @@ function render() {
 }
 
 function kartEkrani(app, icerik) {
-  app.innerHTML = `<div class="giris"><div class="giris-kart"><span class="logo buyuk">ÖD</span>${icerik}</div></div>`;
+  app.innerHTML = `<div class="giris"><div class="giris-kart"><span class="logo buyuk">DP</span>${icerik}</div></div>`;
   return $('.giris-kart', app);
 }
 
@@ -68,7 +68,7 @@ function girisEkrani(app) {
   const ciz = () => {
     const kart = kartEkrani(app, `
       <h1>${kayit ? 'Hesap oluştur' : 'Giriş yap'}</h1>
-      ${Oturum.davetVar ? '<div class="kutu bilgi">Bir kuruma davet edildiniz. Hesap oluşturun ya da mevcut hesabınızla giriş yapın; kuruma otomatik katılacaksınız.</div>' : '<p class="soluk">Özel ders takvimine e-posta ve şifrenizle girin.</p>'}
+      ${Oturum.davetVar ? '<div class="kutu bilgi">Bir kuruma davet edildiniz. Hesap oluşturun ya da mevcut hesabınızla giriş yapın; kuruma otomatik katılacaksınız.</div>' : '<p class="soluk">Ders takvimine e-posta ve şifrenizle girin.</p>'}
       <form class="form tek" id="giris-form">
         <label>E-posta<input name="eposta" type="email" autocomplete="email" required></label>
         <label>Şifre<input name="sifre" type="password" autocomplete="${kayit ? 'new-password' : 'current-password'}" minlength="6" required></label>
@@ -121,7 +121,7 @@ function kurulumEkrani(app) {
     <h2 class="bolum">Yeni kurum oluştur</h2>
     <p class="soluk kucuk-yazi">Kurumun yöneticisi siz olursunuz; diğer öğretmenleri davet linkiyle eklersiniz.</p>
     <form class="form tek" id="kurulum">
-      <label>Kurum / program adı<input name="kurumAdi" placeholder="Örn. Kaya Özel Ders"></label>
+      <label>Kurum / program adı<input name="kurumAdi" placeholder="Örn. Kaya Eğitim"></label>
       <label>Adınız soyadınız *<input name="ad" required autocomplete="name"></label>
       <div class="form-hata-yer"></div>
       <button class="btn birincil genis-btn" type="submit">Kurumu oluştur</button>
